@@ -22,5 +22,7 @@ from core import views
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('',  views.tela_inicial),
-    path('evento/', views.lista_eventos)
+    path('evento', views.lista_eventos),
+    path('evento/criar-evento', views.criar_evento),
+    path('bora/pesquisar/', views.pesquisar_eventos, name='pesquisar_eventos')
 ]

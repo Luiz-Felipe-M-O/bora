@@ -1,10 +1,493 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <title>Evento</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#f97316">
+  <meta name="format-detection" content="telephone=no">
+  <title>Eventos - BORA!</title>
+  <meta name="description" content="Encontre eventos e atividades recreativas na comunidade academica">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+      -webkit-touch-callout: none;
+    }
+
+    :root {
+      --primary: #f97316;
+      --primary-light: #fed7aa;
+      --primary-dark: #ea580c;
+      --secondary: #14b8a6;
+      --accent: #a78bfa;
+      --background: #fafafa;
+      --foreground: #171717;
+      --muted: #f5f5f5;
+      --muted-foreground: #737373;
+      --card: #ffffff;
+      --border: #e5e5e5;
+      --radius: 16px;
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+      --safe-left: env(safe-area-inset-left, 0px);
+      --safe-right: env(safe-area-inset-right, 0px);
+    }
+
+    html {
+      height: 100%;
+      overflow: hidden;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: var(--background);
+      color: var(--foreground);
+      line-height: 1.5;
+      height: 100%;
+      overflow: hidden;
+      overscroll-behavior: none;
+    }
+
+    a {
+      text-decoration: none;
+      color: inherit;
+    }
+
+    button {
+      cursor: pointer;
+      font-family: inherit;
+      border: none;
+      background: none;
+    }
+
+    /* App Shell */
+    .app-shell {
+      height: 100%;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      background: var(--background);
+    }
+
+    /* Status Bar Spacer */
+    .status-bar {
+      height: var(--safe-top);
+      background: var(--card);
+      flex-shrink: 0;
+    }
+
+    /* Top Header */
+    .top-header {
+      padding: 12px 16px;
+      background: var(--card);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+
+    .back-btn {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--muted);
+      color: var(--foreground);
+      transition: background 0.15s ease;
+      flex-shrink: 0;
+    }
+
+    .back-btn:active {
+      background: var(--border);
+      transform: scale(0.95);
+    }
+
+    .header-title {
+      font-size: 1.125rem;
+      font-weight: 700;
+      flex: 1;
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .icon-btn {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--muted);
+      color: var(--foreground);
+      transition: background 0.15s ease;
+    }
+
+    .icon-btn:active {
+      background: var(--border);
+      transform: scale(0.95);
+    }
+
+    /* Main Content - Scrollable */
+    .main-content {
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior-y: contain;
+    }
+
+    /* Filter Tabs */
+    .filter-tabs {
+      display: flex;
+      gap: 8px;
+      padding: 16px;
+      overflow-x: auto;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+      background: var(--card);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .filter-tabs::-webkit-scrollbar {
+      display: none;
+    }
+
+    .filter-tab {
+      padding: 10px 16px;
+      border-radius: 20px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      white-space: nowrap;
+      background: var(--muted);
+      color: var(--muted-foreground);
+      transition: all 0.15s ease;
+    }
+
+    .filter-tab.active {
+      background: var(--primary);
+      color: white;
+    }
+
+    .filter-tab:active {
+      transform: scale(0.95);
+    }
+
+    /* Events List */
+    .events-container {
+      padding: 16px;
+    }
+
+    .events-count {
+      font-size: 0.875rem;
+      color: var(--muted-foreground);
+      margin-bottom: 16px;
+    }
+
+    .events-count strong {
+      color: var(--foreground);
+    }
+
+    .events-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .event-card {
+      display: flex;
+      gap: 14px;
+      padding: 14px;
+      background: var(--card);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .event-card:active {
+      transform: scale(0.98);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+
+    .event-emoji {
+      width: 56px;
+      height: 56px;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: 1.75rem;
+      background: var(--muted);
+    }
+
+    .event-emoji.sports { background: #ccfbf1; }
+    .event-emoji.games { background: #ede9fe; }
+    .event-emoji.music { background: #ffedd5; }
+    .event-emoji.default { background: #fce7f3; }
+
+    .event-content {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .event-title {
+      font-size: 0.9375rem;
+      font-weight: 600;
+      margin-bottom: 4px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .event-description {
+      font-size: 0.8125rem;
+      color: var(--muted-foreground);
+      margin-bottom: 8px;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .event-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      font-size: 0.75rem;
+      color: var(--muted-foreground);
+    }
+
+    .event-meta-item {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .event-meta-item svg {
+      width: 14px;
+      height: 14px;
+      flex-shrink: 0;
+    }
+
+    /* Empty State */
+    .empty-state {
+      text-align: center;
+      padding: 48px 24px;
+    }
+
+    .empty-state-icon {
+      width: 80px;
+      height: 80px;
+      margin: 0 auto 16px;
+      background: var(--muted);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .empty-state-icon svg {
+      width: 40px;
+      height: 40px;
+      color: var(--muted-foreground);
+    }
+
+    .empty-state h3 {
+      font-size: 1.125rem;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .empty-state p {
+      font-size: 0.875rem;
+      color: var(--muted-foreground);
+      margin-bottom: 24px;
+    }
+
+    /* FAB Button */
+    .fab {
+      position: fixed;
+      bottom: calc(24px + var(--safe-bottom));
+      right: 20px;
+      width: 56px;
+      height: 56px;
+      background: var(--primary);
+      color: white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 16px rgba(249, 115, 22, 0.35);
+      transition: transform 0.15s ease;
+      z-index: 100;
+    }
+
+    .fab:active {
+      transform: scale(0.95);
+    }
+
+    .fab svg {
+      width: 24px;
+      height: 24px;
+    }
+
+    /* Bottom Spacer */
+    .bottom-spacer {
+      height: 80px;
+    }
+
+    /* Utility */
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      border: 0;
+    }
+  </style>
 </head>
 <body>
+  <div class="app-shell">
+    <!-- Status Bar Spacer -->
+    <div class="status-bar"></div>
 
+    <!-- Top Header -->
+    <header class="top-header">
+      <a href="/" class="back-btn" aria-label="Voltar">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="m15 18-6-6 6-6"/>
+        </svg>
+      </a>
+      <h1 class="header-title">Eventos</h1>
+      <div class="header-actions">
+        <button class="icon-btn" aria-label="Buscar">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"/>
+            <path d="m21 21-4.35-4.35"/>
+          </svg>
+        </button>
+        <button class="icon-btn" aria-label="Filtrar">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="4" x2="4" y1="21" y2="14"/>
+            <line x1="4" x2="4" y1="10" y2="3"/>
+            <line x1="12" x2="12" y1="21" y2="12"/>
+            <line x1="12" x2="12" y1="8" y2="3"/>
+            <line x1="20" x2="20" y1="21" y2="16"/>
+            <line x1="20" x2="20" y1="12" y2="3"/>
+            <line x1="2" x2="6" y1="14" y2="14"/>
+            <line x1="10" x2="14" y1="8" y2="8"/>
+            <line x1="18" x2="22" y1="16" y2="16"/>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Filter Tabs -->
+    <div class="filter-tabs">
+      <button class="filter-tab active">Todos</button>
+      <button class="filter-tab">Hoje</button>
+      <button class="filter-tab">Esta semana</button>
+      <button class="filter-tab">Esportes</button>
+      <button class="filter-tab">Jogos</button>
+      <button class="filter-tab">Musica</button>
+    </div>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <div class="events-container">
+        <p class="events-count"><strong>{{ eventos|length }}</strong> eventos encontrados</p>
+
+        {% if eventos %}
+        <div class="events-list">
+          {% for evento in eventos %}
+          <a href="#" class="event-card">
+            <div class="event-emoji {% if evento.emoji == '⚽' or evento.emoji == '🏀' %}sports{% elif evento.emoji == '🃏' or evento.emoji == '♟️' or evento.emoji == '🎲' %}games{% else %}default{% endif %}">
+              {{ evento.emoji }}
+            </div>
+            <div class="event-content">
+              <h3 class="event-title">{{ evento.titulo }}</h3>
+              {% if evento.descricao %}
+              <p class="event-description">{{ evento.descricao }}</p>
+              {% endif %}
+              <div class="event-meta">
+                {% if evento.data_evento %}
+                <span class="event-meta-item">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect width="18" height="18" x="3" y="4" rx="2" ry="2"/>
+                    <line x1="16" x2="16" y1="2" y2="6"/>
+                    <line x1="8" x2="8" y1="2" y2="6"/>
+                    <line x1="3" x2="21" y1="10" y2="10"/>
+                  </svg>
+                  {{ evento.data_evento|date:"d/m/Y H:i" }}
+                </span>
+                {% endif %}
+                {% if evento.local %}
+                <span class="event-meta-item">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/>
+                    <circle cx="12" cy="10" r="3"/>
+                  </svg>
+                  {{ evento.local }}
+                </span>
+                {% endif %}
+                <span class="event-meta-item">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/>
+                    <circle cx="12" cy="7" r="4"/>
+                  </svg>
+                  {{ evento.usuario.username }}
+                </span>
+              </div>
+            </div>
+          </a>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state">
+          <div class="empty-state-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <rect width="18" height="18" x="3" y="4" rx="2" ry="2"/>
+              <line x1="16" x2="16" y1="2" y2="6"/>
+              <line x1="8" x2="8" y1="2" y2="6"/>
+              <line x1="3" x2="21" y1="10" y2="10"/>
+              <line x1="9" x2="15" y1="16" y2="16"/>
+            </svg>
+          </div>
+          <h3>Nenhum evento encontrado</h3>
+          <p>Que tal criar o primeiro evento e reunir sua turma?</p>
+        </div>
+        {% endif %}
+
+        <div class="bottom-spacer"></div>
+      </div>
+    </main>
+
+    <!-- FAB - Create Event -->
+    <a href="evento/criar-evento" class="fab" aria-label="Criar evento">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="12" x2="12" y1="5" y2="19"/>
+        <line x1="5" x2="19" y1="12" y2="12"/>
+      </svg>
+    </a>
+  </div>
 </body>
 </html>
