@@ -21,6 +21,6 @@ from core import views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-
-    path('',  views.tela_inicial)
+    path('',  views.tela_inicial),
+    path('evento/', views.lista_eventos)
 ]
