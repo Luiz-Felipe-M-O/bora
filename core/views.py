@@ -141,8 +141,15 @@ def detalhe_evento(request, evento_id):
             p.pontos_proposta_atual = pontos_atuais.get(p.id, 0)
 
         if rodada_atual.status == StatusRodada.CONTESTADA:
-            contestou_rodada_atual = rodada_atual.votos_validacao.filter(
-                user=request.user, concorda=False).exists()
+            # Mesmo que várias pessoas tenham votado "Contestar", apenas a
+            # primeira a fazê-lo (menor id, ou seja, primeira em ordem de
+            # chegada) ganha o direito de repropor a pontuação. Isso evita
+            # que o formulário de novo placar apareça simultaneamente para
+            # todo mundo que contestou.
+            primeiro_contestador = rodada_atual.votos_validacao.filter(
+                concorda=False).order_by('id').first()
+            contestou_rodada_atual = bool(
+                primeiro_contestador and primeiro_contestador.user_id == request.user.id)
 
     context = {
         'evento': evento,
@@ -156,6 +163,45 @@ def detalhe_evento(request, evento_id):
         'contestou_rodada_atual': contestou_rodada_atual,
     }
     return render(request, 'detalhe_evento.html', context)
+
+
+@login_required
+def status_evento(request, evento_id):
+    """Endpoint leve para polling: devolve um identificador do estado atual
+    do evento (status, contagem de participantes, votos, rodada, mensagens
+    etc). O front-end compara esse valor com o que tinha antes e, se mudou,
+    recarrega a página — assim qualquer atualização feita por outro usuário
+    (alguém confirmou presença, votou, contestou, o evento mudou de estado)
+    aparece para todos sem precisar de F5 manual.
+    """
+    evento = get_object_or_404(Evento, id=evento_id)
+
+    rodada_atual = evento.rodadas.exclude(status=StatusRodada.APROVADA).first()
+
+    # Soma simples das contagens de voto de cada opção, para detectar
+    # mudança em qualquer enquete sem precisar listar voto a voto.
+    votos_local = sum(o.total_votos() for o in evento.opcoes_voto.filter(tipo='LOCAL'))
+    votos_data = sum(o.total_votos() for o in evento.opcoes_voto.filter(tipo='DATA'))
+
+    estado = (
+        evento.status,
+        evento.participantes.count(),
+        evento.participantes.filter(status='CONFIRMED').count(),
+        evento.mensagens.count(),
+        evento.opcoes_voto.filter(tipo='LOCAL').count(),
+        evento.opcoes_voto.filter(tipo='DATA').count(),
+        votos_local,
+        votos_data,
+        rodada_atual.id if rodada_atual else None,
+        rodada_atual.status if rodada_atual else None,
+        rodada_atual.votos_validacao.count() if rodada_atual else 0,
+    )
+
+    # Uma tupla é convertida num único valor (hash) para facilitar a
+    # comparação no front-end — basta checar se mudou.
+    fingerprint = hash(estado)
+
+    return JsonResponse({'fingerprint': fingerprint})
 
 
 @login_required
@@ -335,15 +381,20 @@ def gerenciar_rodada(request, evento_id):
             if rodada and participante_atual:
                 # Quem pode propor pontuação:
                 # - estado PONTUACAO (1ª proposta da rodada): só o organizador.
-                # - estado CONTESTADA (reproposta): apenas quem contestou,
-                #   já que a contestação é quem assume a nova pontuação.
+                # - estado CONTESTADA (reproposta): apenas a primeira pessoa
+                #   que contestou, já que só ela assume a nova pontuação.
                 pode_propor = False
                 if rodada.status == StatusRodada.PONTUACAO and evento.usuario == request.user:
                     pode_propor = True
                 elif rodada.status == StatusRodada.CONTESTADA:
-                    contestou = rodada.votos_validacao.filter(
-                        user=request.user, concorda=False).exists()
-                    pode_propor = contestou
+                    # Apenas a primeira pessoa que contestou (menor id entre
+                    # os votos "não") tem permissão de repropor a pontuação.
+                    # Isso é reforçado aqui no backend, e não só na UI, para
+                    # que ninguém contorne a regra enviando o POST direto.
+                    primeiro_contestador = rodada.votos_validacao.filter(
+                        concorda=False).order_by('id').first()
+                    pode_propor = bool(
+                        primeiro_contestador and primeiro_contestador.user_id == request.user.id)
 
                 if pode_propor:
                     for participante in evento.participantes.all():

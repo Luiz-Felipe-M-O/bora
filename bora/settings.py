@@ -139,4 +139,16 @@ STATICFILES_DIRS = [
 # Pasta onde o collectstatic reúne tudo para servir em produção via WhiteNoise.
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
+# Garante que o WhiteNoise sempre sirva .svg com o Content-Type correto.
+# Em alguns ambientes Linux (como o do Render) o mapeamento de mimetypes do
+# sistema operacional não inclui 'image/svg+xml' por padrão; sem isso, o
+# WhiteNoise pode acabar servindo o arquivo com um Content-Type genérico, e
+# dependendo do navegador a imagem não é exibida — mesmo que o arquivo
+# exista e o PNG do banner (que usa um mimetype padrão já reconhecido)
+# funcione normalmente. Isso por si só não resolve o caso de o arquivo
+# simplesmente não ter sido enviado ao repositório (ver checklist abaixo).
+WHITENOISE_MIMETYPES = {
+    '.svg': 'image/svg+xml',
+}
+
 LOGIN_URL = '/entrar'

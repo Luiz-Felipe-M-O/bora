@@ -653,10 +653,10 @@
                             {% csrf_token %}
                             <div class="validation-row" style="border-top: none; padding-top: 0;">
                                 <button type="submit" name="concorda" value="sim" class="btn-approve">
-                                    👍 Aprovar
+                                    Aprovar
                                 </button>
                                 <button type="submit" name="concorda" value="nao" class="btn-reject">
-                                    👎 Contestar
+                                    Contestar
                                 </button>
                             </div>
                         </form>
@@ -683,7 +683,7 @@
                         </form>
                         {% else %}
                         <p style="font-size: 0.875rem; color: var(--muted-foreground);">
-                            O placar foi contestado. Aguardando quem contestou definir uma nova pontuação.
+                            O placar foi contestado. A primeira pessoa que contestou está definindo uma nova pontuação.
                         </p>
                         {% endif %}
                     {% endif %}
@@ -745,6 +745,7 @@
         // ── Envio via AJAX (chat e sugestões) — evita recarregar a página ──
         const CSRF_TOKEN = document.querySelector('input[name="csrfmiddlewaretoken"]')?.value;
         const VOTAR_URL_TEMPLATE = "{% url 'votar_enquete' 0 %}";
+        const STATUS_EVENTO_URL = "{% url 'status_evento' evento.id %}";
 
         async function enviarFormulario(form) {
             const formData = new FormData(form);
@@ -901,6 +902,59 @@
                 if (botao) botao.disabled = false;
             }
         });
+
+        // ── Polling: detecta mudanças feitas por outros usuários ──
+        // A cada poucos segundos, pergunta ao servidor um "retrato" do
+        // estado atual do evento (participantes, votos, rodada, etc). Se
+        // esse retrato mudou desde a última checagem, recarrega a página —
+        // assim todo mundo vê a atualização (alguém confirmou presença,
+        // votou, a rodada mudou de estado, o evento foi encerrado...) sem
+        // precisar apertar F5 manualmente.
+        //
+        // Pausa o polling quando a aba está em segundo plano (economiza
+        // requisições) e não recarrega se o usuário estiver digitando uma
+        // mensagem no chat, para não perder o que ele estava escrevendo.
+        (function () {
+            const INTERVALO_MS = 5000;
+            let fingerprintAtual = null;
+            let primeiraChecagem = true;
+
+            async function checarAtualizacao() {
+                if (document.hidden) return;
+
+                try {
+                    const resp = await fetch(STATUS_EVENTO_URL, {
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                    });
+                    if (!resp.ok) return;
+                    const data = await resp.json();
+
+                    if (primeiraChecagem) {
+                        fingerprintAtual = data.fingerprint;
+                        primeiraChecagem = false;
+                        return;
+                    }
+
+                    if (data.fingerprint !== fingerprintAtual) {
+                        const chatInput = document.querySelector('#chat-form input[name="texto"]');
+                        const digitandoMensagem = chatInput && chatInput.value.trim().length > 0;
+
+                        if (!digitandoMensagem) {
+                            window.location.reload();
+                        } else {
+                            // Evita perder o texto digitado: tenta de novo no
+                            // próximo ciclo, sem recarregar agora.
+                            fingerprintAtual = data.fingerprint;
+                        }
+                    }
+                } catch (e) {
+                    // Falha de rede pontual não deve interromper o polling.
+                }
+            }
+
+            setInterval(checarAtualizacao, INTERVALO_MS);
+            checarAtualizacao();
+        })();
     </script>
 </body>
 </html>

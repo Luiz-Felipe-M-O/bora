@@ -175,7 +175,7 @@
 .steps { display: flex; flex-direction: column; gap: 16px; }
 .step { display: flex; gap: 14px; align-items: flex-start; }
 .step-icon { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.step-icon.one { background: #f3cedb; color: var(--primary-dark); } .step-icon.two { background: #e8e1e2; color: var(--foreground); } .step-icon.three { background: #e8a1ba; color: var(--primary-dark); }
+.step-icon.one { background: #e8e1e2; color: var(--foreground); } .step-icon.two { background: #e8e1e2; color: var(--foreground); } .step-icon.three { background: #e8e1e2; color: var(--foreground); }
 .step-content h3 { font-size: 0.875rem; font-weight: 600; margin-bottom: 2px; }
 .step-content p { font-size: 0.8125rem; color: var(--muted-foreground); line-height: 1.5; }
 .cta-banner { margin: 8px 16px 24px; padding: 24px 20px; background: linear-gradient(135deg, var(--foreground) 0%, var(--primary-dark) 100%); border-radius: var(--radius); text-align: center; color: white; }
