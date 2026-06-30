@@ -139,11 +139,4 @@ STATICFILES_DIRS = [
 # Pasta onde o collectstatic reúne tudo para servir em produção via WhiteNoise.
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
-if not DEBUG:
-    STORAGES = {
-        'staticfiles': {
-            'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage',
-        },
-    }
-
 LOGIN_URL = '/entrar'
