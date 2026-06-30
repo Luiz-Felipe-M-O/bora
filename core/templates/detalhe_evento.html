@@ -914,13 +914,41 @@
         // Pausa o polling quando a aba está em segundo plano (economiza
         // requisições) e não recarrega se o usuário estiver digitando uma
         // mensagem no chat, para não perder o que ele estava escrevendo.
+// ── Polling: detecta mudanças e chat em tempo real ──
         (function () {
-            const INTERVALO_MS = 5000;
+            const INTERVALO_MS = 1000; // <-- Tempo reduzido para 2 segundos! Atraso quase zero.
             let fingerprintAtual = null;
             let primeiraChecagem = true;
+            let qtdMensagens = -1; // Rastreador inteligente do Chat
+
+            // Função que injeta o chat na tela sem recarregar a página
+            function atualizarChatDOM(mensagens) {
+                const chatBox = document.getElementById('chat-box');
+                if (!chatBox) return;
+
+                chatBox.innerHTML = ''; // Limpa a caixa e recria perfeitamente
+                if (mensagens.length === 0) {
+                    chatBox.innerHTML = '<p class="chat-empty">Nenhuma mensagem ainda. Quebre o gelo! 👋</p>';
+                    return;
+                }
+
+                mensagens.forEach(msg => {
+                    const div = document.createElement('div');
+                    div.className = msg.is_minha ? 'mensagem minha' : 'mensagem';
+
+                    const autor = document.createElement('span');
+                    autor.className = 'mensagem-autor';
+                    autor.textContent = msg.autor;
+
+                    div.appendChild(autor);
+                    div.appendChild(document.createTextNode(msg.texto));
+                    chatBox.appendChild(div);
+                });
+                chatBox.scrollTop = chatBox.scrollHeight; // Rola sempre pro final
+            }
 
             async function checarAtualizacao() {
-                if (document.hidden) return;
+                if (document.hidden) return; // Economiza internet se a aba estiver minimizada
 
                 try {
                     const resp = await fetch(STATUS_EVENTO_URL, {
@@ -929,6 +957,15 @@
                     if (!resp.ok) return;
                     const data = await resp.json();
 
+                    // 1. Atualiza o CHAT silenciosamente (Síncrono)
+                    if (qtdMensagens === -1) {
+                        qtdMensagens = data.mensagens.length;
+                    } else if (data.mensagens.length !== qtdMensagens) {
+                        atualizarChatDOM(data.mensagens);
+                        qtdMensagens = data.mensagens.length;
+                    }
+
+                    // 2. Atualiza o RESTO da página apenas se o estado do evento mudar (Reload)
                     if (primeiraChecagem) {
                         fingerprintAtual = data.fingerprint;
                         primeiraChecagem = false;
@@ -942,13 +979,12 @@
                         if (!digitandoMensagem) {
                             window.location.reload();
                         } else {
-                            // Evita perder o texto digitado: tenta de novo no
-                            // próximo ciclo, sem recarregar agora.
+                            // Se estiver digitando, espera a pessoa enviar a mensagem para recarregar
                             fingerprintAtual = data.fingerprint;
                         }
                     }
                 } catch (e) {
-                    // Falha de rede pontual não deve interromper o polling.
+                    // Ignora falhas rápidas de rede do 4G
                 }
             }
 

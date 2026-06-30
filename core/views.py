@@ -167,27 +167,17 @@ def detalhe_evento(request, evento_id):
 
 @login_required
 def status_evento(request, evento_id):
-    """Endpoint leve para polling: devolve um identificador do estado atual
-    do evento (status, contagem de participantes, votos, rodada, mensagens
-    etc). O front-end compara esse valor com o que tinha antes e, se mudou,
-    recarrega a página — assim qualquer atualização feita por outro usuário
-    (alguém confirmou presença, votou, contestou, o evento mudou de estado)
-    aparece para todos sem precisar de F5 manual.
-    """
     evento = get_object_or_404(Evento, id=evento_id)
-
     rodada_atual = evento.rodadas.exclude(status=StatusRodada.APROVADA).first()
-
-    # Soma simples das contagens de voto de cada opção, para detectar
-    # mudança em qualquer enquete sem precisar listar voto a voto.
+    
     votos_local = sum(o.total_votos() for o in evento.opcoes_voto.filter(tipo='LOCAL'))
     votos_data = sum(o.total_votos() for o in evento.opcoes_voto.filter(tipo='DATA'))
 
+    # Retiramos 'evento.mensagens.count()' daqui para não disparar o reload da página inteira!
     estado = (
         evento.status,
         evento.participantes.count(),
         evento.participantes.filter(status='CONFIRMED').count(),
-        evento.mensagens.count(),
         evento.opcoes_voto.filter(tipo='LOCAL').count(),
         evento.opcoes_voto.filter(tipo='DATA').count(),
         votos_local,
@@ -197,11 +187,22 @@ def status_evento(request, evento_id):
         rodada_atual.votos_validacao.count() if rodada_atual else 0,
     )
 
-    # Uma tupla é convertida num único valor (hash) para facilitar a
-    # comparação no front-end — basta checar se mudou.
     fingerprint = hash(estado)
 
-    return JsonResponse({'fingerprint': fingerprint})
+    # Prepara as mensagens do chat para atualizar silenciosamente no front-end
+    mensagens = [
+        {
+            'texto': m.texto,
+            'autor': m.user.username,
+            'is_minha': m.user == request.user
+        }
+        for m in evento.mensagens.all().order_by('data_envio')
+    ]
+
+    return JsonResponse({
+        'fingerprint': fingerprint,
+        'mensagens': mensagens
+    })
 
 
 @login_required
